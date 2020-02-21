@@ -1,0 +1,1641 @@
+'
+chercher des criteres de resemblance qui me feraient donner B plutot que A a ceux qui ont plus beneifice de B que de A.
+comment trouver une regle qui me permettent de montrer en choississant B plutot que A pour ceux pour qui B a bien marche.
+'
+set.seed(2017)
+
+'generer un exemple de donnees d\'essai clinique  qui me permetterait de montrer ce qu\'est la medecine personalisee'
+
+'fonction de conversion en valeur edss'
+dfg2edss= function(vec) { 10+(-1*round(vec/6,0)/2)}
+
+'variable d\'interet : traitement A ou B'
+'treatment, deux traitements A et B'
+treatment = c(rep("A",350),rep("B",350))
+
+'before treatment'
+baseline = rnorm(700,90,10)
+before = dfg2edss(baseline)
+
+'variables explicatives :'
+'IRM, c\'est une Image obtenue par Résonance Magnétique - qui est utilisé à pour le suivi des patients'
+AIRM = c(rnorm(250,55,15), rnorm(50,55,10), rnorm(50,55,10))
+BIRM = c(rnorm(240,43,15), rnorm(60,77,10), rnorm(50,60,10))
+
+'edss, combine les valeurs de AIRM et BIRM'
+after = dfg2edss(c(AIRM, BIRM))
+
+'gender, efficacité est liée au genre'
+gender = c(ifelse(runif(350)<0.4,1,0),ifelse(runif(300)<0.25,1,0),ifelse(runif(50)<0.65,1,0)) 
+
+'smoke, efficacité est liée au sexe'
+smoke = c(ifelse(runif(350)<0.2,1,0),ifelse(runif(300)<0.15,1,0),ifelse(runif(50)<0.5,1,0))
+
+'getATreatment, si le patient a eu le traitement A getATreatment = True et False sinon'
+getATreatment = c(rep("Oui", 350), rep("Non", 350))
+
+'getBTreatment, si le patient a eu le traitement B getBTreatment = True et False sinon'
+getBTreatment = c(rep("Non", 350), rep("Oui", 350))
+
+'creation d\'un data frame contenant toutes nos variables'
+DATA = data.frame(Treatment = treatment, Before = before, After = after, Gender = gender, Smoke = smoke, getATreatment = getATreatment, getBTreatment = getBTreatment)
+str(DATA)
+
+'analyse de baseline'
+sort(unique(DATA[1:700,2]))
+
+'occurence des edss dans Baseline'
+Baseedssfrequency = as.data.frame((table(DATA[1:700,2])))
+Baseedssfrequency
+
+'etat des batient au debut'
+treatment_column = DATA[,2]
+Basepatient_state = 0
+for(i in 1:700)
+{
+  if(treatment_column[i] >= 0 & treatment_column[i] <= 1)
+    Basepatient_state[i] = "Etat Normal"
+  else if(treatment_column[i] >= 1.5 & treatment_column[i] <= 3.5)
+    Basepatient_state[i] = "Etat Bon"
+  else if(treatment_column[i] >= 4 & treatment_column[i] <= 6.5)
+    Basepatient_state[i] = "Etat Moyen"
+  else if(treatment_column[i] >= 7 & treatment_column[i] <= 8.5)
+    Basepatient_state[i] = "Etat Critique"
+  else
+    Basepatient_state[i] = "Risque Mort"
+}
+
+'affichage'
+table(Basepatient_state)
+
+'etat des patients au debut'
+'***gravite de la maladie par sexe et si le patient fume ou pas'
+smoke_column = DATA[,5]
+gender_column = DATA[,4]
+treatment_column = DATA[,2]
+'partie ***'
+'0.0'
+normale_men = 0
+normale_women = 0
+'1 1.5'
+handicap_fonctionnel_men = 0
+handicap_fonctionnel_women = 0
+'2 2.5'
+handicap_minime_men = 0
+handicap_minime_women = 0
+'3 3.5'
+handicap_modere_men = 0
+handicap_modere_women = 0
+'4 4.5'
+handicap_relativement_severe_men = 0
+handicap_relativement_severe_women = 0
+'5 5.5'
+handicap_suffisament_severe_men = 0
+handicap_suffisament_severe_women = 0
+'6 6.5'
+aide_necessaire_men = 0
+aide_necessaire_women = 0
+'7 7.5'
+handicap_men = 0
+handicap_women = 0
+'8 8.5'
+incapacite_marcher_men = 0
+incapacite_marcher_women = 0
+'9 9.5'
+etat_grave_men = 0
+etat_grave_women = 0
+'10.0'
+deces_men = 0
+deces_women = 0
+'0.0'
+normale_men_smoker = 0
+normale_men_nosmoker = 0
+normale_women_smoker = 0
+normale_women_nosmoker = 0
+'1 1.5'
+handicap_fonctionnel_men_smoker = 0
+handicap_fonctionnel_men_nosmoker = 0
+handicap_fonctionnel_women_smoker = 0
+handicap_fonctionnel_women_nosmoker = 0
+'2 2.5'
+handicap_minime_men_smoker = 0
+handicap_minime_men_nosmoker = 0
+handicap_minime_women_smoker = 0
+handicap_minime_women_nosmoker = 0
+'3 3.5'
+handicap_modere_men_smoker = 0
+handicap_modere_men_nosmoker = 0
+handicap_modere_women_smoker = 0
+handicap_modere_women_nosmoker = 0
+'4 4.5'
+handicap_relativement_severe_men_smoker = 0
+handicap_relativement_severe_men_nosmoker = 0
+handicap_relativement_severe_women_smoker = 0
+handicap_relativement_severe_women_nosmoker = 0
+'5 5.5'
+handicap_suffisament_severe_men_smoker = 0
+handicap_suffisament_severe_men_nosmoker = 0
+handicap_suffisament_severe_women_smoker = 0
+handicap_suffisament_severe_women_nosmoker = 0
+'6 6.5'
+aide_necessaire_men_smoker = 0
+aide_necessaire_men_nosmoker = 0
+aide_necessaire_women_smoker = 0
+aide_necessaire_women_nosmoker = 0
+'7 7.5'
+handicap_men_smoker = 0
+handicap_men_nosmoker = 0
+handicap_women_smoker = 0
+handicap_women_nosmoker = 0
+'8 8.5'
+incapacite_marcher_men_smoker = 0
+incapacite_marcher_men_nosmoker = 0
+incapacite_marcher_women_smoker = 0
+incapacite_marcher_women_nosmoker = 0
+'9 9.5'
+etat_grave_men_smoker = 0
+etat_grave_men_nosmoker = 0
+etat_grave_women_smoker = 0
+etat_grave_women_nosmoker = 0
+'10.0'
+deces_men_smoker = 0
+deces_men_nosmoker = 0
+deces_women_smoker = 0
+deces_women_nosmoker = 0
+
+'etat au debut : baseline'
+for(i in 1:700)
+{
+  if(treatment_column[i] == 0.0 | treatment_column[i] == 0.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      normale_men = normale_men+1
+      if(smoke_column[i] == 1)
+        normale_men_smoker = normale_men_smoker+1
+      else
+        normale_men_nosmoker = normale_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      normale_women= normale_women+1
+      if(smoke_column[i] == 0)
+        normale_women_smoker = normale_women_smoker+1
+      else
+        normale_women_nosmoker = normale_women_nosmoker+1
+    }
+  }
+  if(treatment_column[i] == 1.0 | treatment_column[i] == 1.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      handicap_fonctionnel_men = handicap_fonctionnel_men+1
+      if(smoke_column[i] == 1)
+        handicap_fonctionnel_men_smoker = handicap_fonctionnel_men_smoker+1
+      else
+        handicap_fonctionnel_men_nosmoker = handicap_fonctionnel_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      handicap_fonctionnel_women = handicap_fonctionnel_women+1
+      if(smoke_column[i] == 0)
+        handicap_fonctionnel_women_smoker = handicap_fonctionnel_women_smoker+1
+      else
+        handicap_fonctionnel_women_nosmoker = handicap_fonctionnel_women_nosmoker+1
+    }
+  }
+  if(treatment_column[i] == 2 | treatment_column[i] == 2.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      handicap_minime_men = handicap_minime_men+1
+      if(smoke_column[i] == 1)
+        handicap_minime_men_smoker = handicap_minime_men_smoker+1
+      else
+        handicap_minime_men_nosmoker = handicap_minime_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      handicap_minime_women = handicap_minime_women+1
+      if(smoke_column[i] == 0)
+        handicap_minime_women_smoker = handicap_minime_women_smoker+1
+      else
+        handicap_minime_women_nosmoker = handicap_minime_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 3 | treatment_column[i] == 3.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      handicap_modere_men = handicap_modere_men+1
+      if(smoke_column[i] == 1)
+        handicap_modere_men_smoker = handicap_modere_men_smoker+1
+      else
+        handicap_modere_men_nosmoker = handicap_modere_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      handicap_modere_women = handicap_modere_women+1
+      if(smoke_column[i] == 0)
+        handicap_modere_women_smoker = handicap_modere_women_smoker+1
+      else
+        handicap_modere_women_nosmoker = handicap_modere_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 4 | treatment_column[i] == 4.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      handicap_relativement_severe_men = handicap_relativement_severe_men+1
+      if(smoke_column[i] == 1)
+        handicap_relativement_severe_men_smoker = handicap_relativement_severe_men_smoker+1
+      else
+        handicap_relativement_severe_men_nosmoker = handicap_relativement_severe_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      handicap_relativement_severe_women = handicap_relativement_severe_women+1
+      if(smoke_column[i] == 0)
+        handicap_relativement_severe_women_smoker = handicap_relativement_severe_women_smoker+1
+      else
+        handicap_relativement_severe_women_nosmoker = handicap_relativement_severe_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 5 | treatment_column[i] == 5.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      handicap_suffisament_severe_men = handicap_suffisament_severe_men+1
+      if(smoke_column[i] == 1)
+        handicap_suffisament_severe_men_smoker = handicap_suffisament_severe_men_smoker+1
+      else
+        handicap_suffisament_severe_men_nosmoker = handicap_suffisament_severe_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      handicap_suffisament_severe_women = handicap_suffisament_severe_women+1
+      if(smoke_column[i] == 0)
+        handicap_suffisament_severe_women_smoker = handicap_suffisament_severe_women_smoker+1
+      else
+        handicap_suffisament_severe_women_nosmoker = handicap_suffisament_severe_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 6 | treatment_column[i] == 6.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      aide_necessaire_men = aide_necessaire_men+1
+      if(smoke_column[i] == 1)
+        aide_necessaire_men_smoker = aide_necessaire_men_smoker+1
+      else
+        aide_necessaire_men_nosmoker = aide_necessaire_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      aide_necessaire_women = aide_necessaire_women+1
+      if(smoke_column[i] == 0)
+        aide_necessaire_women_smoker = aide_necessaire_women_smoker+1
+      else
+        aide_necessaire_women_nosmoker = aide_necessaire_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 7 | treatment_column[i] == 7.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      handicap_men = handicap_men+1
+      if(smoke_column[i] == 1)
+        handicap_men_smoker = handicap_men_smoker+1
+      else
+        handicap_men_nosmoker = handicap_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      handicap_women = handicap_women+1
+      if(smoke_column[i] == 0)
+        handicap_women_smoker = handicap_women_smoker+1
+      else
+        handicap_women_nosmoker = handicap_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 8 | treatment_column[i] == 8.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      incapacite_marcher_men = incapacite_marcher_men+1
+      if(smoke_column[i] == 1)
+        incapacite_marcher_men_smoker = incapacite_marcher_men_smoker+1
+      else
+        incapacite_marcher_men_nosmoker = incapacite_marcher_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      incapacite_marcher_women = incapacite_marcher_women+1
+      if(smoke_column[i] == 0)
+        incapacite_marcher_women_smoker = incapacite_marcher_women_smoker+1
+      else
+        incapacite_marcher_women_nosmoker = incapacite_marcher_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 9 | treatment_column[i] == 9.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      etat_grave_men = etat_grave_men+1
+      if(smoke_column[i] == 1)
+        etat_grave_men_smoker = etat_grave_men_smoker+1
+      else
+        etat_grave_men_nosmoker = etat_grave_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      etat_grave_women = etat_grave_women+1
+      if(smoke_column[i] == 0)
+        etat_grave_women_smoker = etat_grave_women_smoker+1
+      else
+        etat_grave_women_nosmoker = etat_grave_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 10)
+  {
+    if(gender_column[i] == 1)
+    {
+      deces_men = deces_men+1
+      if(smoke_column[i] == 1)
+        deces_men_smoker = deces_men_smoker+1
+      else
+        deces_men_nosmoker = deces_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      deces_women = deces_women+1
+      if(smoke_column[i] == 0)
+        deces_women_smoker = deces_women_smoker+1
+      else
+        deces_women_nosmoker = deces_women_nosmoker+1
+    }
+  }
+}
+
+Baseseverity_by_sexe_smoke = data.frame("Treatment" = "BASE",
+  "Severity" = c("examen neurologique normale", "abscence handicap fonctionnel", "handicap minime", "handicap modéré", "handicap relativement sévère",
+    "handicap suffisament sevère", "aide necessaire pour marchr et travailler", "incapacite de marcher",
+    "patient est confiné au lit ou au fauteuil roulant", "patient ne peut plus manger ou avaler, ni communiquer", "deces"),
+  "Men" = c(normale_men, handicap_fonctionnel_men, handicap_minime_men, handicap_modere_men, handicap_relativement_severe_men,
+    handicap_suffisament_severe_men, aide_necessaire_men, handicap_men, incapacite_marcher_men, etat_grave_men, deces_men),
+  "Men Smoker" = c(normale_men_smoker, handicap_fonctionnel_men_smoker, handicap_minime_men_smoker, handicap_modere_men_smoker, 
+    handicap_relativement_severe_men_smoker, handicap_suffisament_severe_men_smoker, aide_necessaire_men_smoker, handicap_men_smoker, 
+    incapacite_marcher_men_smoker, etat_grave_men_smoker, deces_men_smoker),
+  "Men No smoker" = c(normale_men_nosmoker, handicap_fonctionnel_men_nosmoker, handicap_minime_men_nosmoker, handicap_modere_men_nosmoker, 
+    handicap_relativement_severe_men_nosmoker, handicap_suffisament_severe_men_nosmoker, aide_necessaire_men_nosmoker, handicap_men_nosmoker, 
+    incapacite_marcher_men_nosmoker, etat_grave_men_nosmoker, deces_men_nosmoker),
+  "Women" = c(normale_women, handicap_fonctionnel_women, handicap_minime_women, handicap_modere_women, handicap_relativement_severe_women,
+    handicap_suffisament_severe_women, aide_necessaire_women, handicap_women, incapacite_marcher_women, etat_grave_women, deces_women),
+  "Women Smoker" = c(normale_women_smoker, handicap_fonctionnel_women_smoker, handicap_minime_women_smoker, handicap_modere_women_smoker, 
+    handicap_relativement_severe_women_smoker, handicap_suffisament_severe_women_smoker, aide_necessaire_women_smoker, handicap_women_smoker, 
+    incapacite_marcher_women_smoker, etat_grave_women_smoker, deces_women_smoker),
+  "Women No smoker" = c(normale_women_nosmoker, handicap_fonctionnel_women_nosmoker, handicap_minime_women_nosmoker, handicap_modere_women_nosmoker, 
+    handicap_relativement_severe_women_nosmoker, handicap_suffisament_severe_women_nosmoker, aide_necessaire_women_nosmoker, 
+    handicap_women_nosmoker, incapacite_marcher_women_nosmoker, etat_grave_women_nosmoker, deces_women_nosmoker)
+)
+
+
+##############
+
+'(**) analyse apres avoir traitement A/B'
+'comparaison des edss du traitement A et B'
+'edss valeur'
+sort(unique(DATA[1:350,3]))
+sort(unique(DATA[351:700,3]))
+
+'occurence de chaque valeur (edss)'
+Aedssfrequency = as.data.frame((table(DATA[1:350,3])))
+Bedssfrequency = as.data.frame((table(DATA[351:700,3])))
+
+summary(DATA[1:350,3])
+summary(DATA[351:700,3])
+
+'Etats des patients par traitement'
+treatment_column = DATA[,3]
+
+'traitement A'
+'initialisation'
+Apatient_state = 0
+
+for(i in 1:350)
+{
+  if(treatment_column[i] >= 0 & treatment_column[i] <= 1)
+    Apatient_state[i] = "Etat Normal"
+  else if(treatment_column[i] >= 1.5 & treatment_column[i] <= 3.5)
+    Apatient_state[i] = "Etat Bon"
+  else if(treatment_column[i] >= 4 & treatment_column[i] <= 6.5)
+    Apatient_state[i] = "Etat Moyen"
+  else if(treatment_column[i] >= 7 & treatment_column[i] <= 8.5)
+    Apatient_state[i] = "Etat Critique"
+  else
+    Apatient_state[i] = "Risque Mort"
+}
+
+'affichage'
+table(Apatient_state)
+
+'traitement B'
+'initialisation'
+treatment_column = DATA[,3]
+Bpatient_state = 0
+
+for(i in 351:700)
+{
+  if(treatment_column[i] <= 1)
+    Bpatient_state[i] = "Etat Normal"
+  else if(treatment_column[i] >= 1 & treatment_column[i] <= 3.5)
+    Bpatient_state[i] = "Etat Bon"
+  else if(treatment_column[i] >= 4 & treatment_column[i] <= 6.5)
+    Bpatient_state[i] = "Etat Moyen"
+  else if(treatment_column[i] >= 7 & treatment_column[i] <= 8.5)
+    Bpatient_state[i] = "Etat Critique"
+  else
+    Bpatient_state[i] = "Risque Mort"
+}
+
+'affichage'
+table(Bpatient_state)
+
+'rappel valeur edss :'
+'edss se compose de deux parties : 
+cote de 0 à 3.5 : tient compte de paramètres fonctionnels
+cote de 4 à 10 : tien en compte des capacités ambulatoires du patient'
+
+'
+0.0 : examen neurologique normale
+1.0 : abscence d\'handicap fonctionnel, signes minimes d\'atteinte d\'une des fonction
+2.0 : handicap minime
+3.0 : handicap modéré
+4.0 : handicap relativement sévère
+5.0 : handicap suffisament sevère pour entraver activite d une journee normale
+6.0 : aide necessaire pour marchr et travailler
+7.0 : incapacite de marcher
+8.0 : patient est confiné au lit ou au fauteuil roulant
+9.0 : patient ne peut plus manger ou avaler, ni communiquer
+10.0 : deces
+'
+'*gravite de la maladie par sexe'
+'savoir le traitement A a marché mieux pour quel sexe on se basant sur l\'edss'
+'je prend 1 pour homme et 0 pour femme dans l\'attente de confirmation'
+gender_column = DATA[,4]
+treatment_column = DATA[,3]
+
+'init variable'
+'partie *'
+'0.0'
+normale_men = 0
+normale_women = 0
+'1 1.5'
+handicap_fonctionnel_men = 0
+handicap_fonctionnel_women = 0
+'2 2.5'
+handicap_minime_men = 0
+handicap_minime_women = 0
+'3 3.5'
+handicap_modere_men = 0
+handicap_modere_women = 0
+'4 4.5'
+handicap_relativement_severe_men = 0
+handicap_relativement_severe_women = 0
+'5 5.5'
+handicap_suffisament_severe_men = 0
+handicap_suffisament_severe_women = 0
+'6 6.5'
+aide_necessaire_men = 0
+aide_necessaire_women = 0
+'7 7.5'
+handicap_men = 0
+handicap_women = 0
+'8 8.5'
+incapacite_marcher_men = 0
+incapacite_marcher_women = 0
+'9 9.5'
+etat_grave_men = 0
+etat_grave_women = 0
+'10.0'
+deces_men = 0
+deces_women = 0
+
+'1:350 que le traitement A'
+for(i in 1:350)
+{
+  if(treatment_column[i] == 0.0 | treatment_column[i] == 0.5)
+    if(gender_column[i] == 1)
+      normale_men = normale_men+1
+    else
+      normale_women= normale_women+1
+    
+    if(treatment_column[i] == 1 | treatment_column[i] == 1.5)
+      if(gender_column[i] == 1)
+        handicap_fonctionnel_men = handicap_fonctionnel_men+1
+      else
+        handicap_fonctionnel_women = handicap_fonctionnel_women+1
+      
+      if(treatment_column[i] == 2 | treatment_column[i] == 2.5)
+        if(gender_column[i] == 1)
+          handicap_minime_men = handicap_minime_men+1
+        else
+          handicap_minime_women = handicap_minime_women+1
+        
+        if(treatment_column[i] == 3 | treatment_column[i] == 3.5)
+          if(gender_column[i] == 1)
+            handicap_modere_men = handicap_modere_men+1
+          else
+            handicap_modere_women = handicap_modere_women+1
+          
+          if(treatment_column[i] == 4 | treatment_column[i] == 4.5)
+            if(gender_column[i] == 1)
+              handicap_relativement_severe_men = handicap_relativement_severe_men+1
+            else
+              handicap_relativement_severe_women = handicap_relativement_severe_women+1
+            
+            if(treatment_column[i] == 5 | treatment_column[i] == 5.5)
+              if(gender_column[i] == 1)
+                handicap_suffisament_severe_men = handicap_suffisament_severe_men+1
+              else
+                handicap_suffisament_severe_women = handicap_suffisament_severe_women+1
+              
+              if(treatment_column[i] == 6 | treatment_column[i] == 6.5)
+                if(gender_column[i] == 1)
+                  aide_necessaire_men = aide_necessaire_men+1
+                else
+                  aide_necessaire_women = aide_necessaire_women+1
+                
+                if(treatment_column[i] == 7 | treatment_column[i] == 7.5)
+                  if(gender_column[i] == 1)
+                    handicap_men = handicap_men+1
+                  else
+                    handicap_women = handicap_women+1
+                  
+                  if(treatment_column[i] == 8 | treatment_column[i] == 8.5)
+                    if(gender_column[i] == 1)
+                      incapacite_marcher_men = incapacite_marcher_men+1
+                    else
+                      incapacite_marcher_women = incapacite_marcher_women+1
+                    
+                    if(treatment_column[i] == 9 | treatment_column[i] == 9.5)
+                      if(gender_column[i] == 1)
+                        etat_grave_men = etat_grave_men+1
+                      else
+                        etat_grave_women = etat_grave_women+1
+                      
+                      if(treatment_column[i] == 10.0)
+                        if(gender_column[i] == 1)
+                          deces_men = deces_men+1
+                        else
+                          deces_women = deces_women+1
+}
+
+'affichage sous forme d\'un data frame'
+Aseverity_by_sexe = data.frame("Treatment" = "A",
+  "Severity" = c("examen neurologique normale", "abscence handicap fonctionnel", "handicap minime", "handicap modéré", "handicap relativement sévère",
+    "handicap suffisament sevère", "aide necessaire pour marchr et travailler", "incapacite de marcher",
+    "patient est confiné au lit ou au fauteuil roulant", "patient ne peut plus manger ou avaler, ni communiquer", "deces"),
+  "Men" = c(normale_men, handicap_fonctionnel_men, handicap_minime_men, handicap_modere_men, handicap_relativement_severe_men,
+    handicap_suffisament_severe_men, aide_necessaire_men, handicap_men, incapacite_marcher_men, etat_grave_men, deces_men),
+  "Women" = c(normale_women, handicap_fonctionnel_women, handicap_minime_women, handicap_modere_women, handicap_relativement_severe_women,
+    handicap_suffisament_severe_women, aide_necessaire_women, handicap_women, incapacite_marcher_women, etat_grave_women, deces_women))
+
+'351:700 que le traitement B'
+'il faut reeinitialiser les valeurs de : normale_women, etc'
+gender_column = DATA[,4]
+treatment_column = DATA[,3]
+'partie *'
+'0.0'
+normale_men = 0
+normale_women = 0
+'1 1.5'
+handicap_fonctionnel_men = 0
+handicap_fonctionnel_women = 0
+'2 2.5'
+handicap_minime_men = 0
+handicap_minime_women = 0
+'3 3.5'
+handicap_modere_men = 0
+handicap_modere_women = 0
+'4 4.5'
+handicap_relativement_severe_men = 0
+handicap_relativement_severe_women = 0
+'5 5.5'
+handicap_suffisament_severe_men = 0
+handicap_suffisament_severe_women = 0
+'6 6.5'
+aide_necessaire_men = 0
+aide_necessaire_women = 0
+'7 7.5'
+handicap_men = 0
+handicap_women = 0
+'8 8.5'
+incapacite_marcher_men = 0
+incapacite_marcher_women = 0
+'9 9.5'
+etat_grave_men = 0
+etat_grave_women = 0
+'10.0'
+deces_men = 0
+deces_women = 0
+
+for(i in 351:700)
+{
+  if(treatment_column[i] == 0.0 | treatment_column[i] == 0.5)
+    if(gender_column[i] == 1)
+      normale_men = normale_men+1
+    else
+      normale_women= normale_women+1
+    
+    if(treatment_column[i] == 1 | treatment_column[i] == 1.5)
+      if(gender_column[i] == 1)
+        handicap_fonctionnel_men = handicap_fonctionnel_men+1
+      else
+        handicap_fonctionnel_women = handicap_fonctionnel_women+1
+      
+      if(treatment_column[i] == 2 | treatment_column[i] == 2.5)
+        if(gender_column[i] == 1)
+          handicap_minime_men = handicap_minime_men+1
+        else
+          handicap_minime_women = handicap_minime_women+1
+        
+        if(treatment_column[i] == 3 | treatment_column[i] == 3.5)
+          if(gender_column[i] == 1)
+            handicap_modere_men = handicap_modere_men+1
+          else
+            handicap_modere_women = handicap_modere_women+1
+          
+          if(treatment_column[i] == 4 | treatment_column[i] == 4.5)
+            if(gender_column[i] == 1)
+              handicap_relativement_severe_men = handicap_relativement_severe_men+1
+            else
+              handicap_relativement_severe_women = handicap_relativement_severe_women+1
+            
+            if(treatment_column[i] == 5 | treatment_column[i] == 5.5)
+              if(gender_column[i] == 1)
+                handicap_suffisament_severe_men = handicap_suffisament_severe_men+1
+              else
+                handicap_suffisament_severe_women = handicap_suffisament_severe_women+1
+              
+              if(treatment_column[i] == 6 | treatment_column[i] == 6.5)
+                if(gender_column[i] == 1)
+                  aide_necessaire_men = aide_necessaire_men+1
+                else
+                  aide_necessaire_women = aide_necessaire_women+1
+                
+                if(treatment_column[i] == 7 | treatment_column[i] == 7.5)
+                  if(gender_column[i] == 1)
+                    handicap_men = handicap_men+1
+                  else
+                    handicap_women = handicap_women+1
+                  
+                  if(treatment_column[i] == 8 | treatment_column[i] == 8.5)
+                    if(gender_column[i] == 1)
+                      incapacite_marcher_men = incapacite_marcher_men+1
+                    else
+                      incapacite_marcher_women = incapacite_marcher_women+1
+                    
+                    if(treatment_column[i] == 9 | treatment_column[i] == 9.5)
+                      if(gender_column[i] == 1)
+                        etat_grave_men = etat_grave_men+1
+                      else
+                        etat_grave_women = etat_grave_women+1
+                      
+                      if(treatment_column[i] == 10.0)
+                        if(gender_column[i] == 1)
+                          deces_men = deces_men+1
+                        else
+                          deces_women = deces_women+1
+}
+
+Bseverity_by_sexe = data.frame("Treatment" = "B",
+  "Severity" = c("examen neurologique normale", "abscence handicap fonctionnel", "handicap minime", "handicap modéré", "handicap relativement sévère",
+    "handicap suffisament sevère", "aide necessaire pour marchr et travailler", "incapacite de marcher",
+    "patient est confiné au lit ou au fauteuil roulant", "patient ne peut plus manger ou avaler, ni communiquer", "deces"),
+  "Men" = c(normale_men, handicap_fonctionnel_men, handicap_minime_men, handicap_modere_men, handicap_relativement_severe_men,
+    handicap_suffisament_severe_men, aide_necessaire_men, handicap_men, incapacite_marcher_men, etat_grave_men, deces_men),
+  "Women" = c(normale_women, handicap_fonctionnel_women, handicap_minime_women, handicap_modere_women, handicap_relativement_severe_women,
+    handicap_suffisament_severe_women, aide_necessaire_women, handicap_women, incapacite_marcher_women, etat_grave_women, deces_women))
+
+'**gravite de la maladie par condition si le patient fume ou pas'
+'savoir le traitement A a marché mieux pour les fumeurs ou les non fumeur on se basant sur l\'edss'
+'je prend 0 pour fumeur et 1 pour non fumeur'
+smoke_column = DATA[,5]
+treatment_column = DATA[,3]
+'partie **'
+'0.0'
+normale_smoker = 0
+normale_nosmoker = 0
+'1 1.5'
+handicap_fonctionnel_smoker = 0
+handicap_fonctionnel_nosmoker = 0
+'2 2.5'
+handicap_minime_smoker = 0
+handicap_minime_nosmoker = 0
+'3 3.5'
+handicap_modere_smoker = 0
+handicap_modere_nosmoker = 0
+'4 4.5'
+handicap_relativement_severe_smoker = 0
+handicap_relativement_severe_nosmoker = 0
+'5 5.5'
+handicap_suffisament_severe_smoker = 0
+handicap_suffisament_severe_nosmoker = 0
+'6 6.5'
+aide_necessaire_smoker = 0
+aide_necessaire_nosmoker = 0
+'7 7.5'
+handicap_smoker = 0
+handicap_nosmoker = 0
+'8 8.5'
+incapacite_marcher_smoker = 0
+incapacite_marcher_nosmoker = 0
+'9 9.5'
+etat_grave_smoker = 0
+etat_grave_nosmoker = 0
+'10.0'
+deces_smoker = 0
+deces_nosmoker = 0
+
+'traitement A'
+for(i in 1:350)
+{
+  if(treatment_column[i] == 0.0 | treatment_column[i] == 0.5)
+    if(smoke_column[i] == 1)
+      normale_smoker = normale_smoker+1
+    else
+      normale_nosmoker = normale_nosmoker+1
+
+    if(treatment_column[i] == 1 | treatment_column[i] == 1.5)
+      if(smoke_column[i] == 1)
+        handicap_fonctionnel_smoker = handicap_fonctionnel_smoker+1
+      else
+        handicap_fonctionnel_nosmoker = handicap_fonctionnel_nosmoker+1
+
+      if(treatment_column[i] == 2 | treatment_column[i] == 2.5)
+        if(smoke_column[i] == 1)
+          handicap_minime_smoker = handicap_minime_smoker+1
+        else
+          handicap_minime_nosmoker = handicap_minime_nosmoker+1
+
+        if(treatment_column[i] == 3 | treatment_column[i] == 3.5)
+          if(smoke_column[i] == 1)
+            handicap_modere_smoker = handicap_modere_smoker+1
+          else
+            handicap_modere_nosmoker = handicap_modere_nosmoker+1
+
+          if(treatment_column[i] == 4 | treatment_column[i] == 4.5)
+            if(smoke_column[i] == 1)
+              handicap_relativement_severe_smoker = handicap_relativement_severe_smoker+1
+            else
+              handicap_relativement_severe_nosmoker = handicap_relativement_severe_nosmoker+1
+
+            if(treatment_column[i] == 5 | treatment_column[i] == 5.5)
+              if(smoke_column[i] == 1)
+                handicap_suffisament_severe_smoker = handicap_suffisament_severe_smoker+1
+              else
+                handicap_suffisament_severe_nosmoker = handicap_suffisament_severe_nosmoker+1
+                
+              if(treatment_column[i] == 6 | treatment_column[i] == 6.5)
+                if(smoke_column[i] == 1)
+                  aide_necessaire_smoker = aide_necessaire_smoker+1
+                else
+                  aide_necessaire_nosmoker = aide_necessaire_nosmoker+1
+                
+                if(treatment_column[i] == 7 | treatment_column[i] == 7.5)
+                  if(smoke_column[i] == 1)
+                    handicap_smoker = handicap_smoker+1
+                  else
+                    handicap_nosmoker = handicap_nosmoker+1
+                  
+                  if(treatment_column[i] == 8 | treatment_column[i] == 8.5)
+                    if(smoke_column[i] == 1)
+                      incapacite_marcher_smoker = incapacite_marcher_smoker+1
+                    else
+                      incapacite_marcher_nosmoker = incapacite_marcher_nosmoker+1
+                    
+                    if(treatment_column[i] == 9 | treatment_column[i] == 9.5)
+                      if(smoke_column[i] == 1)
+                        etat_grave_smoker = etat_grave_smoker+1
+                      else
+                        etat_grave_nosmoker = etat_grave_nosmoker+1
+  
+                      if(treatment_column[i] == 10.0)
+                        if(smoke_column[i] == 1)
+                          deces_smoker = deces_smoker+1
+                        else
+                          deces_nosmoker = deces_nosmoker+1
+}
+
+Aseverity_by_smoke = data.frame("Treatment" = "A",
+  "Severity" = c("examen neurologique normale", "abscence handicap fonctionnel", "handicap minime", "handicap modéré", "handicap relativement sévère",
+    "handicap suffisament sevère", "aide necessaire pour marchr et travailler", "incapacite de marcher",
+    "patient est confiné au lit ou au fauteuil roulant", "patient ne peut plus manger ou avaler, ni communiquer", "deces"),
+  "Smoker" = c(normale_smoker, handicap_fonctionnel_smoker, handicap_minime_smoker, handicap_modere_smoker, handicap_relativement_severe_smoker,
+    handicap_suffisament_severe_smoker, aide_necessaire_smoker, handicap_smoker, incapacite_marcher_smoker, etat_grave_smoker, deces_smoker),
+  "No smoker" = c(normale_nosmoker, handicap_fonctionnel_nosmoker, handicap_minime_nosmoker, handicap_modere_nosmoker, handicap_relativement_severe_nosmoker,
+    handicap_suffisament_severe_nosmoker, aide_necessaire_nosmoker, handicap_nosmoker, incapacite_marcher_nosmoker, etat_grave_nosmoker, deces_nosmoker))
+
+'traitement B'
+smoke_column = DATA[,5]
+treatment_column = DATA[,3]
+'il faut imperativement reinitialiser les variables'
+'0.0'
+normale_smoker = 0
+normale_nosmoker = 0
+'1 1.5'
+handicap_fonctionnel_smoker = 0
+handicap_fonctionnel_nosmoker = 0
+'2 2.5'
+handicap_minime_smoker = 0
+handicap_minime_nosmoker = 0
+'3 3.5'
+handicap_modere_smoker = 0
+handicap_modere_nosmoker = 0
+'4 4.5'
+handicap_relativement_severe_smoker = 0
+handicap_relativement_severe_nosmoker = 0
+'5 5.5'
+handicap_suffisament_severe_smoker = 0
+handicap_suffisament_severe_nosmoker = 0
+'6 6.5'
+aide_necessaire_smoker = 0
+aide_necessaire_nosmoker = 0
+'7 7.5'
+handicap_smoker = 0
+handicap_nosmoker = 0
+'8 8.5'
+incapacite_marcher_smoker = 0
+incapacite_marcher_nosmoker = 0
+'9 9.5'
+etat_grave_smoker = 0
+etat_grave_nosmoker = 0
+'10.0'
+deces_smoker = 0
+deces_nosmoker = 0
+
+for(i in 351:700)
+{
+  if(treatment_column[i] == 0.0)
+    if(smoke_column[i] == 1)
+      normale_smoker = normale_smoker+1
+    else
+      normale_nosmoker = normale_nosmoker+1
+    
+    if(treatment_column[i] == 1 | treatment_column[i] == 1.5)
+      if(smoke_column[i] == 1)
+        handicap_fonctionnel_smoker = handicap_fonctionnel_smoker+1
+      else
+        handicap_fonctionnel_nosmoker = handicap_fonctionnel_nosmoker+1
+      
+      if(treatment_column[i] == 2 | treatment_column[i] == 2.5)
+        if(smoke_column[i] == 1)
+          handicap_minime_smoker = handicap_minime_smoker+1
+        else
+          handicap_minime_nosmoker = handicap_minime_nosmoker+1
+        
+        if(treatment_column[i] == 3 | treatment_column[i] == 3.5)
+          if(smoke_column[i] == 1)
+            handicap_modere_smoker = handicap_modere_smoker+1
+          else
+            handicap_modere_nosmoker = handicap_modere_nosmoker+1
+          
+          if(treatment_column[i] == 4 | treatment_column[i] == 4.5)
+            if(smoke_column[i] == 1)
+              handicap_relativement_severe_smoker = handicap_relativement_severe_smoker+1
+            else
+              handicap_relativement_severe_nosmoker = handicap_relativement_severe_nosmoker+1
+            
+            if(treatment_column[i] == 5 | treatment_column[i] == 5.5)
+              if(smoke_column[i] == 1)
+                handicap_suffisament_severe_smoker = handicap_suffisament_severe_smoker+1
+              else
+                handicap_suffisament_severe_nosmoker = handicap_suffisament_severe_nosmoker+1
+              
+              if(treatment_column[i] == 6 | treatment_column[i] == 6.5)
+                if(smoke_column[i] == 1)
+                  aide_necessaire_smoker = aide_necessaire_smoker+1
+                else
+                  aide_necessaire_nosmoker = aide_necessaire_nosmoker+1
+                
+                if(treatment_column[i] == 7 | treatment_column[i] == 7.5)
+                  if(smoke_column[i] == 1)
+                    handicap_smoker = handicap_smoker+1
+                  else
+                    handicap_nosmoker = handicap_nosmoker+1
+                  
+                  if(treatment_column[i] == 8 | treatment_column[i] == 8.5)
+                    if(smoke_column[i] == 1)
+                      incapacite_marcher_smoker = incapacite_marcher_smoker+1
+                    else
+                      incapacite_marcher_nosmoker = incapacite_marcher_nosmoker+1
+                    
+                    if(treatment_column[i] == 9 | treatment_column[i] == 9.5)
+                      if(smoke_column[i] == 1)
+                        etat_grave_smoker = etat_grave_smoker+1
+                      else
+                        etat_grave_nosmoker = etat_grave_nosmoker+1
+                      
+                      if(treatment_column[i] == 10.0)
+                        if(smoke_column[i] == 1)
+                          deces_smoker = deces_smoker+1
+                        else
+                          deces_nosmoker = deces_nosmoker+1
+}
+
+Bseverity_by_smoke = data.frame("Treatment" = "B",
+  "Severity" = c("examen neurologique normale", "abscence handicap fonctionnel", "handicap minime", "handicap modéré", "handicap relativement sévère",
+    "handicap suffisament sevère", "aide necessaire pour marchr et travailler", "incapacite de marcher",
+    "patient est confiné au lit ou au fauteuil roulant", "patient ne peut plus manger ou avaler, ni communiquer", "deces"),
+  "Smoker" = c(normale_smoker, handicap_fonctionnel_smoker, handicap_minime_smoker, handicap_modere_smoker, handicap_relativement_severe_smoker,
+    handicap_suffisament_severe_smoker, aide_necessaire_smoker, handicap_smoker, incapacite_marcher_smoker, etat_grave_smoker, deces_smoker),
+  "No smoker" = c(normale_nosmoker, handicap_fonctionnel_nosmoker, handicap_minime_nosmoker, handicap_modere_nosmoker, handicap_relativement_severe_nosmoker,
+    handicap_suffisament_severe_nosmoker, aide_necessaire_nosmoker, handicap_nosmoker, incapacite_marcher_nosmoker, etat_grave_nosmoker, deces_nosmoker))
+
+'***gravite de la maladie par sexe et si le patient fume ou pas'
+smoke_column = DATA[,5]
+gender_column = DATA[,4]
+treatment_column = DATA[,3]
+'partie ***'
+'0.0'
+normale_men = 0
+normale_women = 0
+'1 1.5'
+handicap_fonctionnel_men = 0
+handicap_fonctionnel_women = 0
+'2 2.5'
+handicap_minime_men = 0
+handicap_minime_women = 0
+'3 3.5'
+handicap_modere_men = 0
+handicap_modere_women = 0
+'4 4.5'
+handicap_relativement_severe_men = 0
+handicap_relativement_severe_women = 0
+'5 5.5'
+handicap_suffisament_severe_men = 0
+handicap_suffisament_severe_women = 0
+'6 6.5'
+aide_necessaire_men = 0
+aide_necessaire_women = 0
+'7 7.5'
+handicap_men = 0
+handicap_women = 0
+'8 8.5'
+incapacite_marcher_men = 0
+incapacite_marcher_women = 0
+'9 9.5'
+etat_grave_men = 0
+etat_grave_women = 0
+'10.0'
+deces_men = 0
+deces_women = 0
+'0.0'
+normale_men_smoker = 0
+normale_men_nosmoker = 0
+normale_women_smoker = 0
+normale_women_nosmoker = 0
+'1 1.5'
+handicap_fonctionnel_men_smoker = 0
+handicap_fonctionnel_men_nosmoker = 0
+handicap_fonctionnel_women_smoker = 0
+handicap_fonctionnel_women_nosmoker = 0
+'2 2.5'
+handicap_minime_men_smoker = 0
+handicap_minime_men_nosmoker = 0
+handicap_minime_women_smoker = 0
+handicap_minime_women_nosmoker = 0
+'3 3.5'
+handicap_modere_men_smoker = 0
+handicap_modere_men_nosmoker = 0
+handicap_modere_women_smoker = 0
+handicap_modere_women_nosmoker = 0
+'4 4.5'
+handicap_relativement_severe_men_smoker = 0
+handicap_relativement_severe_men_nosmoker = 0
+handicap_relativement_severe_women_smoker = 0
+handicap_relativement_severe_women_nosmoker = 0
+'5 5.5'
+handicap_suffisament_severe_men_smoker = 0
+handicap_suffisament_severe_men_nosmoker = 0
+handicap_suffisament_severe_women_smoker = 0
+handicap_suffisament_severe_women_nosmoker = 0
+'6 6.5'
+aide_necessaire_men_smoker = 0
+aide_necessaire_men_nosmoker = 0
+aide_necessaire_women_smoker = 0
+aide_necessaire_women_nosmoker = 0
+'7 7.5'
+handicap_men_smoker = 0
+handicap_men_nosmoker = 0
+handicap_women_smoker = 0
+handicap_women_nosmoker = 0
+'8 8.5'
+incapacite_marcher_men_smoker = 0
+incapacite_marcher_men_nosmoker = 0
+incapacite_marcher_women_smoker = 0
+incapacite_marcher_women_nosmoker = 0
+'9 9.5'
+etat_grave_men_smoker = 0
+etat_grave_men_nosmoker = 0
+etat_grave_women_smoker = 0
+etat_grave_women_nosmoker = 0
+'10.0'
+deces_men_smoker = 0
+deces_men_nosmoker = 0
+deces_women_smoker = 0
+deces_women_nosmoker = 0
+
+'traitement A'
+for(i in 1:350)
+{
+  if(treatment_column[i] == 0.0 | treatment_column[i] == 0.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      normale_men = normale_men+1
+      if(smoke_column[i] == 1)
+        normale_men_smoker = normale_men_smoker+1
+      else
+        normale_men_nosmoker = normale_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      normale_women= normale_women+1
+      if(smoke_column[i] == 0)
+        normale_women_smoker = normale_women_smoker+1
+      else
+        normale_women_nosmoker = normale_women_nosmoker+1
+    }
+  }
+  if(treatment_column[i] == 1.0 | treatment_column[i] == 1.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      handicap_fonctionnel_men = handicap_fonctionnel_men+1
+      if(smoke_column[i] == 1)
+        handicap_fonctionnel_men_smoker = handicap_fonctionnel_men_smoker+1
+      else
+        handicap_fonctionnel_men_nosmoker = handicap_fonctionnel_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      handicap_fonctionnel_women = handicap_fonctionnel_women+1
+      if(smoke_column[i] == 0)
+        handicap_fonctionnel_women_smoker = handicap_fonctionnel_women_smoker+1
+      else
+        handicap_fonctionnel_women_nosmoker = handicap_fonctionnel_women_nosmoker+1
+    }
+  }
+  if(treatment_column[i] == 2 | treatment_column[i] == 2.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      handicap_minime_men = handicap_minime_men+1
+      if(smoke_column[i] == 1)
+        handicap_minime_men_smoker = handicap_minime_men_smoker+1
+      else
+        handicap_minime_men_nosmoker = handicap_minime_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      handicap_minime_women = handicap_minime_women+1
+      if(smoke_column[i] == 0)
+        handicap_minime_women_smoker = handicap_minime_women_smoker+1
+      else
+        handicap_minime_women_nosmoker = handicap_minime_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 3 | treatment_column[i] == 3.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      handicap_modere_men = handicap_modere_men+1
+      if(smoke_column[i] == 1)
+        handicap_modere_men_smoker = handicap_modere_men_smoker+1
+      else
+        handicap_modere_men_nosmoker = handicap_modere_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      handicap_modere_women = handicap_modere_women+1
+      if(smoke_column[i] == 0)
+        handicap_modere_women_smoker = handicap_modere_women_smoker+1
+      else
+        handicap_modere_women_nosmoker = handicap_modere_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 4 | treatment_column[i] == 4.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      handicap_relativement_severe_men = handicap_relativement_severe_men+1
+      if(smoke_column[i] == 1)
+        handicap_relativement_severe_men_smoker = handicap_relativement_severe_men_smoker+1
+      else
+        handicap_relativement_severe_men_nosmoker = handicap_relativement_severe_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      handicap_relativement_severe_women = handicap_relativement_severe_women+1
+      if(smoke_column[i] == 0)
+        handicap_relativement_severe_women_smoker = handicap_relativement_severe_women_smoker+1
+      else
+        handicap_relativement_severe_women_nosmoker = handicap_relativement_severe_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 5 | treatment_column[i] == 5.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      handicap_suffisament_severe_men = handicap_suffisament_severe_men+1
+      if(smoke_column[i] == 1)
+        handicap_suffisament_severe_men_smoker = handicap_suffisament_severe_men_smoker+1
+      else
+        handicap_suffisament_severe_men_nosmoker = handicap_suffisament_severe_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      handicap_suffisament_severe_women = handicap_suffisament_severe_women+1
+      if(smoke_column[i] == 0)
+        handicap_suffisament_severe_women_smoker = handicap_suffisament_severe_women_smoker+1
+      else
+        handicap_suffisament_severe_women_nosmoker = handicap_suffisament_severe_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 6 | treatment_column[i] == 6.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      aide_necessaire_men = aide_necessaire_men+1
+      if(smoke_column[i] == 1)
+        aide_necessaire_men_smoker = aide_necessaire_men_smoker+1
+      else
+        aide_necessaire_men_nosmoker = aide_necessaire_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      aide_necessaire_women = aide_necessaire_women+1
+      if(smoke_column[i] == 0)
+        aide_necessaire_women_smoker = aide_necessaire_women_smoker+1
+      else
+        aide_necessaire_women_nosmoker = aide_necessaire_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 7 | treatment_column[i] == 7.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      handicap_men = handicap_men+1
+      if(smoke_column[i] == 1)
+        handicap_men_smoker = handicap_men_smoker+1
+      else
+        handicap_men_nosmoker = handicap_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      handicap_women = handicap_women+1
+      if(smoke_column[i] == 0)
+        handicap_women_smoker = handicap_women_smoker+1
+      else
+        handicap_women_nosmoker = handicap_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 8 | treatment_column[i] == 8.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      incapacite_marcher_men = incapacite_marcher_men+1
+      if(smoke_column[i] == 1)
+        incapacite_marcher_men_smoker = incapacite_marcher_men_smoker+1
+      else
+        incapacite_marcher_men_nosmoker = incapacite_marcher_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      incapacite_marcher_women = incapacite_marcher_women+1
+      if(smoke_column[i] == 0)
+        incapacite_marcher_women_smoker = incapacite_marcher_women_smoker+1
+      else
+        incapacite_marcher_women_nosmoker = incapacite_marcher_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 9 | treatment_column[i] == 9.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      etat_grave_men = etat_grave_men+1
+      if(smoke_column[i] == 1)
+        etat_grave_men_smoker = etat_grave_men_smoker+1
+      else
+        etat_grave_men_nosmoker = etat_grave_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      etat_grave_women = etat_grave_women+1
+      if(smoke_column[i] == 0)
+        etat_grave_women_smoker = etat_grave_women_smoker+1
+      else
+        etat_grave_women_nosmoker = etat_grave_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 10)
+  {
+    if(gender_column[i] == 1)
+    {
+      deces_men = deces_men+1
+      if(smoke_column[i] == 1)
+        deces_men_smoker = deces_men_smoker+1
+      else
+        deces_men_nosmoker = deces_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      deces_women = deces_women+1
+      if(smoke_column[i] == 0)
+        deces_women_smoker = deces_women_smoker+1
+      else
+        deces_women_nosmoker = deces_women_nosmoker+1
+    }
+  }
+}
+
+Aseverity_by_sexe_smoke = data.frame("Treatment" = "A",
+  "Severity" = c("examen neurologique normale", "abscence handicap fonctionnel", "handicap minime", "handicap modéré", "handicap relativement sévère",
+                 "handicap suffisament sevère", "aide necessaire pour marchr et travailler", "incapacite de marcher",
+                 "patient est confiné au lit ou au fauteuil roulant", "patient ne peut plus manger ou avaler, ni communiquer", "deces"),
+  "Men" = c(normale_men, handicap_fonctionnel_men, handicap_minime_men, handicap_modere_men, handicap_relativement_severe_men,
+            handicap_suffisament_severe_men, aide_necessaire_men, handicap_men, incapacite_marcher_men, etat_grave_men, deces_men),
+  "Men Smoker" = c(normale_men_smoker, handicap_fonctionnel_men_smoker, handicap_minime_men_smoker, handicap_modere_men_smoker, 
+               handicap_relativement_severe_men_smoker, handicap_suffisament_severe_men_smoker, aide_necessaire_men_smoker, handicap_men_smoker, 
+               incapacite_marcher_men_smoker, etat_grave_men_smoker, deces_men_smoker),
+  "Men No smoker" = c(normale_men_nosmoker, handicap_fonctionnel_men_nosmoker, handicap_minime_men_nosmoker, handicap_modere_men_nosmoker, 
+                  handicap_relativement_severe_men_nosmoker, handicap_suffisament_severe_men_nosmoker, aide_necessaire_men_nosmoker, handicap_men_nosmoker, 
+                  incapacite_marcher_men_nosmoker, etat_grave_men_nosmoker, deces_men_nosmoker),
+  "Women" = c(normale_women, handicap_fonctionnel_women, handicap_minime_women, handicap_modere_women, handicap_relativement_severe_women,
+              handicap_suffisament_severe_women, aide_necessaire_women, handicap_women, incapacite_marcher_women, etat_grave_women, deces_women),
+  "Women Smoker" = c(normale_women_smoker, handicap_fonctionnel_women_smoker, handicap_minime_women_smoker, handicap_modere_women_smoker, 
+               handicap_relativement_severe_women_smoker, handicap_suffisament_severe_women_smoker, aide_necessaire_women_smoker, handicap_women_smoker, 
+               incapacite_marcher_women_smoker, etat_grave_women_smoker, deces_women_smoker),
+  "Women No smoker" = c(normale_women_nosmoker, handicap_fonctionnel_women_nosmoker, handicap_minime_women_nosmoker, handicap_modere_women_nosmoker, 
+                  handicap_relativement_severe_women_nosmoker, handicap_suffisament_severe_women_nosmoker, aide_necessaire_women_nosmoker, 
+                  handicap_women_nosmoker, incapacite_marcher_women_nosmoker, etat_grave_women_nosmoker, deces_women_nosmoker)
+  )
+
+'traitement B'
+smoke_column = DATA[,5]
+gender_column = DATA[,4]
+treatment_column = DATA[,3]
+'partie ***'
+'0.0'
+normale_men = 0
+normale_women = 0
+'1 1.5'
+handicap_fonctionnel_men = 0
+handicap_fonctionnel_women = 0
+'2 2.5'
+handicap_minime_men = 0
+handicap_minime_women = 0
+'3 3.5'
+handicap_modere_men = 0
+handicap_modere_women = 0
+'4 4.5'
+handicap_relativement_severe_men = 0
+handicap_relativement_severe_women = 0
+'5 5.5'
+handicap_suffisament_severe_men = 0
+handicap_suffisament_severe_women = 0
+'6 6.5'
+aide_necessaire_men = 0
+aide_necessaire_women = 0
+'7 7.5'
+handicap_men = 0
+handicap_women = 0
+'8 8.5'
+incapacite_marcher_men = 0
+incapacite_marcher_women = 0
+'9 9.5'
+etat_grave_men = 0
+etat_grave_women = 0
+'10.0'
+deces_men = 0
+deces_women = 0
+'0.0'
+normale_men_smoker = 0
+normale_men_nosmoker = 0
+normale_women_smoker = 0
+normale_women_nosmoker = 0
+'1 1.5'
+handicap_fonctionnel_men_smoker = 0
+handicap_fonctionnel_men_nosmoker = 0
+handicap_fonctionnel_women_smoker = 0
+handicap_fonctionnel_women_nosmoker = 0
+'2 2.5'
+handicap_minime_men_smoker = 0
+handicap_minime_men_nosmoker = 0
+handicap_minime_women_smoker = 0
+handicap_minime_women_nosmoker = 0
+'3 3.5'
+handicap_modere_men_smoker = 0
+handicap_modere_men_nosmoker = 0
+handicap_modere_women_smoker = 0
+handicap_modere_women_nosmoker = 0
+'4 4.5'
+handicap_relativement_severe_men_smoker = 0
+handicap_relativement_severe_men_nosmoker = 0
+handicap_relativement_severe_women_smoker = 0
+handicap_relativement_severe_women_nosmoker = 0
+'5 5.5'
+handicap_suffisament_severe_men_smoker = 0
+handicap_suffisament_severe_men_nosmoker = 0
+handicap_suffisament_severe_women_smoker = 0
+handicap_suffisament_severe_women_nosmoker = 0
+'6 6.5'
+aide_necessaire_men_smoker = 0
+aide_necessaire_men_nosmoker = 0
+aide_necessaire_women_smoker = 0
+aide_necessaire_women_nosmoker = 0
+'7 7.5'
+handicap_men_smoker = 0
+handicap_men_nosmoker = 0
+handicap_women_smoker = 0
+handicap_women_nosmoker = 0
+'8 8.5'
+incapacite_marcher_men_smoker = 0
+incapacite_marcher_men_nosmoker = 0
+incapacite_marcher_women_smoker = 0
+incapacite_marcher_women_nosmoker = 0
+'9 9.5'
+etat_grave_men_smoker = 0
+etat_grave_men_nosmoker = 0
+etat_grave_women_smoker = 0
+etat_grave_women_nosmoker = 0
+'10.0'
+deces_men_smoker = 0
+deces_men_nosmoker = 0
+deces_women_smoker = 0
+deces_women_nosmoker = 0
+
+'traitement A'
+for(i in 351:700)
+{
+  if(treatment_column[i] == 0.0 | treatment_column[i] == 0.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      normale_men = normale_men+1
+      if(smoke_column[i] == 1)
+        normale_men_smoker = normale_men_smoker+1
+      else
+        normale_men_nosmoker = normale_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      normale_women= normale_women+1
+      if(smoke_column[i] == 0)
+        normale_women_smoker = normale_women_smoker+1
+      else
+        normale_women_nosmoker = normale_women_nosmoker+1
+    }
+  }
+  if(treatment_column[i] == 1.0 | treatment_column[i] == 1.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      handicap_fonctionnel_men = handicap_fonctionnel_men+1
+      if(smoke_column[i] == 1)
+        handicap_fonctionnel_men_smoker = handicap_fonctionnel_men_smoker+1
+      else
+        handicap_fonctionnel_men_nosmoker = handicap_fonctionnel_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      handicap_fonctionnel_women = handicap_fonctionnel_women+1
+      if(smoke_column[i] == 0)
+        handicap_fonctionnel_women_smoker = handicap_fonctionnel_women_smoker+1
+      else
+        handicap_fonctionnel_women_nosmoker = handicap_fonctionnel_women_nosmoker+1
+    }
+  }
+  if(treatment_column[i] == 2 | treatment_column[i] == 2.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      handicap_minime_men = handicap_minime_men+1
+      if(smoke_column[i] == 1)
+        handicap_minime_men_smoker = handicap_minime_men_smoker+1
+      else
+        handicap_minime_men_nosmoker = handicap_minime_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      handicap_minime_women = handicap_minime_women+1
+      if(smoke_column[i] == 0)
+        handicap_minime_women_smoker = handicap_minime_women_smoker+1
+      else
+        handicap_minime_women_nosmoker = handicap_minime_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 3 | treatment_column[i] == 3.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      handicap_modere_men = handicap_modere_men+1
+      if(smoke_column[i] == 1)
+        handicap_modere_men_smoker = handicap_modere_men_smoker+1
+      else
+        handicap_modere_men_nosmoker = handicap_modere_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      handicap_modere_women = handicap_modere_women+1
+      if(smoke_column[i] == 0)
+        handicap_modere_women_smoker = handicap_modere_women_smoker+1
+      else
+        handicap_modere_women_nosmoker = handicap_modere_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 4 | treatment_column[i] == 4.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      handicap_relativement_severe_men = handicap_relativement_severe_men+1
+      if(smoke_column[i] == 1)
+        handicap_relativement_severe_men_smoker = handicap_relativement_severe_men_smoker+1
+      else
+        handicap_relativement_severe_men_nosmoker = handicap_relativement_severe_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      handicap_relativement_severe_women = handicap_relativement_severe_women+1
+      if(smoke_column[i] == 0)
+        handicap_relativement_severe_women_smoker = handicap_relativement_severe_women_smoker+1
+      else
+        handicap_relativement_severe_women_nosmoker = handicap_relativement_severe_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 5 | treatment_column[i] == 5.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      handicap_suffisament_severe_men = handicap_suffisament_severe_men+1
+      if(smoke_column[i] == 1)
+        handicap_suffisament_severe_men_smoker = handicap_suffisament_severe_men_smoker+1
+      else
+        handicap_suffisament_severe_men_nosmoker = handicap_suffisament_severe_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      handicap_suffisament_severe_women = handicap_suffisament_severe_women+1
+      if(smoke_column[i] == 0)
+        handicap_suffisament_severe_women_smoker = handicap_suffisament_severe_women_smoker+1
+      else
+        handicap_suffisament_severe_women_nosmoker = handicap_suffisament_severe_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 6 | treatment_column[i] == 6.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      aide_necessaire_men = aide_necessaire_men+1
+      if(smoke_column[i] == 1)
+        aide_necessaire_men_smoker = aide_necessaire_men_smoker+1
+      else
+        aide_necessaire_men_nosmoker = aide_necessaire_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      aide_necessaire_women = aide_necessaire_women+1
+      if(smoke_column[i] == 0)
+        aide_necessaire_women_smoker = aide_necessaire_women_smoker+1
+      else
+        aide_necessaire_women_nosmoker = aide_necessaire_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 7 | treatment_column[i] == 7.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      handicap_men = handicap_men+1
+      if(smoke_column[i] == 1)
+        handicap_men_smoker = handicap_men_smoker+1
+      else
+        handicap_men_nosmoker = handicap_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      handicap_women = handicap_women+1
+      if(smoke_column[i] == 0)
+        handicap_women_smoker = handicap_women_smoker+1
+      else
+        handicap_women_nosmoker = handicap_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 8 | treatment_column[i] == 8.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      incapacite_marcher_men = incapacite_marcher_men+1
+      if(smoke_column[i] == 1)
+        incapacite_marcher_men_smoker = incapacite_marcher_men_smoker+1
+      else
+        incapacite_marcher_men_nosmoker = incapacite_marcher_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      incapacite_marcher_women = incapacite_marcher_women+1
+      if(smoke_column[i] == 0)
+        incapacite_marcher_women_smoker = incapacite_marcher_women_smoker+1
+      else
+        incapacite_marcher_women_nosmoker = incapacite_marcher_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 9 | treatment_column[i] == 9.5)
+  {
+    if(gender_column[i] == 1)
+    {
+      etat_grave_men = etat_grave_men+1
+      if(smoke_column[i] == 1)
+        etat_grave_men_smoker = etat_grave_men_smoker+1
+      else
+        etat_grave_men_nosmoker = etat_grave_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      etat_grave_women = etat_grave_women+1
+      if(smoke_column[i] == 0)
+        etat_grave_women_smoker = etat_grave_women_smoker+1
+      else
+        etat_grave_women_nosmoker = etat_grave_women_nosmoker+1
+    }
+  }
+  
+  if(treatment_column[i] == 10)
+  {
+    if(gender_column[i] == 1)
+    {
+      deces_men = deces_men+1
+      if(smoke_column[i] == 1)
+        deces_men_smoker = deces_men_smoker+1
+      else
+        deces_men_nosmoker = deces_men_nosmoker+1
+    }
+    if(gender_column[i] == 0)
+    {
+      deces_women = deces_women+1
+      if(smoke_column[i] == 0)
+        deces_women_smoker = deces_women_smoker+1
+      else
+        deces_women_nosmoker = deces_women_nosmoker+1
+    }
+  }
+}
+
+Bseverity_by_sexe_smoke = data.frame("Treatment" = "B",
+  "Severity" = c("examen neurologique normale", "abscence handicap fonctionnel", "handicap minime", "handicap modéré", "handicap relativement sévère",
+    "handicap suffisament sevère", "aide necessaire pour marchr et travailler", "incapacite de marcher",
+    "patient est confiné au lit ou au fauteuil roulant", "patient ne peut plus manger ou avaler, ni communiquer", "deces"),
+  "Men" = c(normale_men, handicap_fonctionnel_men, handicap_minime_men, handicap_modere_men, handicap_relativement_severe_men,
+    handicap_suffisament_severe_men, aide_necessaire_men, handicap_men, incapacite_marcher_men, etat_grave_men, deces_men),
+  "Men Smoker" = c(normale_men_smoker, handicap_fonctionnel_men_smoker, handicap_minime_men_smoker, handicap_modere_men_smoker, 
+    handicap_relativement_severe_men_smoker, handicap_suffisament_severe_men_smoker, aide_necessaire_men_smoker, handicap_men_smoker, 
+    incapacite_marcher_men_smoker, etat_grave_men_smoker, deces_men_smoker),
+  "Men No smoker" = c(normale_men_nosmoker, handicap_fonctionnel_men_nosmoker, handicap_minime_men_nosmoker, handicap_modere_men_nosmoker, 
+    handicap_relativement_severe_men_nosmoker, handicap_suffisament_severe_men_nosmoker, aide_necessaire_men_nosmoker, handicap_men_nosmoker, 
+    incapacite_marcher_men_nosmoker, etat_grave_men_nosmoker, deces_men_nosmoker),
+  "Women" = c(normale_women, handicap_fonctionnel_women, handicap_minime_women, handicap_modere_women, handicap_relativement_severe_women,
+    handicap_suffisament_severe_women, aide_necessaire_women, handicap_women, incapacite_marcher_women, etat_grave_women, deces_women),
+  "Women Smoker" = c(normale_women_smoker, handicap_fonctionnel_women_smoker, handicap_minime_women_smoker, handicap_modere_women_smoker, 
+    handicap_relativement_severe_women_smoker, handicap_suffisament_severe_women_smoker, aide_necessaire_women_smoker, handicap_women_smoker, 
+    incapacite_marcher_women_smoker, etat_grave_women_smoker, deces_women_smoker),
+  "Women No smoker" = c(normale_women_nosmoker, handicap_fonctionnel_women_nosmoker, handicap_minime_women_nosmoker, handicap_modere_women_nosmoker, 
+    handicap_relativement_severe_women_nosmoker, handicap_suffisament_severe_women_nosmoker, aide_necessaire_women_nosmoker, 
+    handicap_women_nosmoker, incapacite_marcher_women_nosmoker, etat_grave_women_nosmoker, deces_women_nosmoker)
+)
+
+
+

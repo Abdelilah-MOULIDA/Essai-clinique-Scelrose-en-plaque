@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1582462682568.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1761810662",
+    "id" : "FAEED325",
+    "lastKnownWriteTime" : 1582488842,
+    "last_content_update" : 1582488842921,
+    "path" : "~/Desktop/project/mysourcecode.R",
+    "project_path" : "mysourcecode.R",
+    "properties" : {
+        "cursorPosition" : "282,0",
+        "scrollLine" : "269"
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
